@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
 export type GradientStop = {
   color: string;
@@ -43,7 +43,7 @@ export type SuperellipseState = {
   glowThemeMode: 'dark' | 'light';
 };
 
-const DEFAULT_STATE: SuperellipseState = {
+export const DEFAULT_STATE: SuperellipseState = {
   width: 290,
   height: 350,
   radius: 52,
@@ -148,12 +148,22 @@ function oklchToHex(l: number, c: number, h: number): string {
   return `#${toHex(rgb[0])}${toHex(rgb[1])}${toHex(rgb[2])}`.toUpperCase();
 }
 
-export function useSuperellipse() {
+export function useSuperellipse(props?: {
+  onStateChange?: (state: SuperellipseState) => void;
+}) {
   const [state, setState] = useState<SuperellipseState>(DEFAULT_STATE);
 
-  const updateState = (updates: Partial<SuperellipseState>) => {
-    setState((prev) => ({ ...prev, ...updates }));
-  };
+  // Track latest state and callback in refs for reliable access
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const onStateChangeRef = useRef(props?.onStateChange);
+  onStateChangeRef.current = props?.onStateChange;
+
+  const updateState = useCallback((updates: Partial<SuperellipseState>) => {
+    const newState = { ...stateRef.current, ...updates };
+    setState(newState);
+    onStateChangeRef.current?.(newState);
+  }, []);
 
   const updateGradientStop = (
   index: number,
@@ -166,6 +176,7 @@ export function useSuperellipse() {
 
   const resetState = () => {
     setState(DEFAULT_STATE);
+    onStateChangeRef.current?.(DEFAULT_STATE);
   };
 
   const randomizeGlow = () => {
@@ -193,4 +204,9 @@ export function useSuperellipse() {
     resetState,
     randomizeGlow
   };
-}
+}/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'

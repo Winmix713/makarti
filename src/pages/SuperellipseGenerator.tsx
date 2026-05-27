@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { PreviewArea } from '../components/PreviewArea';
 import { ControlPanel } from '../components/ControlPanel';
 import { LiveCodePanel } from '../components/panels/LiveCodePanel';
-import { useSuperellipse, SuperellipseState } from '../hooks/useSuperellipse';
+import { useSuperellipse, SuperellipseState, DEFAULT_STATE } from '../hooks/useSuperellipse';
 import { useTheme } from '../hooks/useTheme';
 import { useLayerManager } from '../hooks/useLayerManager';
 import { useAssetLibrary } from '../hooks/useAssetLibrary';
@@ -12,21 +12,19 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { CodeIcon, ChevronUpIcon, ChevronDownIcon } from 'lucide-react';
 export function SuperellipseGenerator() {
   const { theme, toggleTheme } = useTheme();
+  const undoRedo = useUndoRedo<SuperellipseState>(DEFAULT_STATE);
   const { state, updateState, updateGradientStop, resetState, randomizeGlow } =
-  useSuperellipse();
+  useSuperellipse({
+    onStateChange: undoRedo.pushState
+  });
   const layerManager = useLayerManager();
   const assetLibrary = useAssetLibrary();
   const projectManager = useProjectManager();
-  const undoRedo = useUndoRedo<SuperellipseState>(state);
   const [showCodePanel, setShowCodePanel] = useState(false);
-  // Load state from preset
+  // Load state from preset — batch update in a single call
   const loadState = useCallback(
     (newState: SuperellipseState) => {
-      Object.keys(newState).forEach((key) => {
-        updateState({
-          [key]: newState[key as keyof SuperellipseState]
-        });
-      });
+      updateState(newState);
     },
     [updateState]
   );
@@ -158,4 +156,21 @@ export function SuperellipseGenerator() {
       }
     </div>);
 
-}
+}/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
