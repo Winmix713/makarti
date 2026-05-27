@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 interface HistoryEntry<T> {
   state: T;
@@ -20,6 +20,7 @@ interface UseUndoRedoReturn<T> {
 }
 
 const MAX_HISTORY = 50;
+const DEBOUNCE_MS = 300;
 
 export function useUndoRedo<T>(initialState?: T): UseUndoRedoReturn<T> {
   const [history, setHistory] = useState<HistoryEntry<T>[]>(
@@ -36,6 +37,61 @@ export function useUndoRedo<T>(initialState?: T): UseUndoRedoReturn<T> {
   const [currentIndex, setCurrentIndex] = useState(initialState ? 0 : -1);
   const isUndoRedoAction = useRef(false);
 
+  // Refs to keep latest values accessible inside timers
+  const currentIndexRef = useRef(currentIndex);
+  currentIndexRef.current = currentIndex;
+  const historyRef = useRef(history);
+  historyRef.current = history;
+
+  // Debounce mechanism
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingStateRef = useRef<{ state: T; description: string } | null>(null);
+
+  const commitPendingState = useCallback(() => {
+    const pending = pendingStateRef.current;
+    if (pending === null) return;
+
+    pendingStateRef.current = null;
+
+    const { state, description } = pending;
+
+    setHistory((prev) => {
+      const newHistory = prev.slice(0, currentIndexRef.current + 1);
+      newHistory.push({
+        state,
+        description,
+        timestamp: Date.now()
+      });
+
+      if (newHistory.length > MAX_HISTORY) {
+        newHistory.shift();
+        return newHistory;
+      }
+
+      return newHistory;
+    });
+
+    setCurrentIndex((prev) => {
+      return Math.min(prev + 1, MAX_HISTORY - 1);
+    });
+  }, []);
+
+  // Flush any pending debounced state before undo/redo
+  const flushPending = useCallback(() => {
+    if (pendingStateRef.current !== null) {
+      commitPendingState();
+    }
+  }, [commitPendingState]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
   const pushState = useCallback(
     (state: T, description: string = 'Change') => {
       if (isUndoRedoAction.current) {
@@ -43,51 +99,59 @@ export function useUndoRedo<T>(initialState?: T): UseUndoRedoReturn<T> {
         return;
       }
 
-      setHistory((prev) => {
-        const newHistory = prev.slice(0, currentIndex + 1);
-        newHistory.push({
-          state: JSON.parse(JSON.stringify(state)),
-          description,
-          timestamp: Date.now()
-        });
+      // Store the pending state (coalescing — replaces previous pending)
+      pendingStateRef.current = {
+        state: JSON.parse(JSON.stringify(state)),
+        description
+      };
 
-        if (newHistory.length > MAX_HISTORY) {
-          newHistory.shift();
-          return newHistory;
-        }
+      // Clear existing timer
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
 
-        return newHistory;
-      });
-
-      setCurrentIndex((prev) => {
-        const newIndex = Math.min(prev + 1, MAX_HISTORY - 1);
-        return newIndex;
-      });
+      // Set a new timer — only commits after 300ms of inactivity
+      debounceTimerRef.current = setTimeout(() => {
+        commitPendingState();
+      }, DEBOUNCE_MS);
     },
-    [currentIndex]
+    [commitPendingState]
   );
 
   const undo = useCallback((): T | null => {
-    if (currentIndex <= 0) return null;
+    // Flush any pending state first so undo operates on complete history
+    flushPending();
+
+    if (currentIndexRef.current <= 0) return null;
 
     isUndoRedoAction.current = true;
-    const newIndex = currentIndex - 1;
+    const newIndex = currentIndexRef.current - 1;
     setCurrentIndex(newIndex);
 
-    return JSON.parse(JSON.stringify(history[newIndex].state));
-  }, [currentIndex, history]);
+    return JSON.parse(JSON.stringify(historyRef.current[newIndex].state));
+  }, [flushPending]);
 
   const redo = useCallback((): T | null => {
-    if (currentIndex >= history.length - 1) return null;
+    // Flush any pending state first
+    flushPending();
+
+    if (currentIndexRef.current >= historyRef.current.length - 1) return null;
 
     isUndoRedoAction.current = true;
-    const newIndex = currentIndex + 1;
+    const newIndex = currentIndexRef.current + 1;
     setCurrentIndex(newIndex);
 
-    return JSON.parse(JSON.stringify(history[newIndex].state));
-  }, [currentIndex, history]);
+    return JSON.parse(JSON.stringify(historyRef.current[newIndex].state));
+  }, [flushPending]);
 
   const clear = useCallback(() => {
+    // Clear any pending debounced state
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    pendingStateRef.current = null;
+
     setHistory([]);
     setCurrentIndex(-1);
   }, []);
